@@ -1,0 +1,16 @@
+{
+  "sample": "IMG_3769",
+  "shape": [
+    4032,
+    3024,
+    3
+  ],
+  "tile_size": 1024,
+  "overlap": 32,
+  "tile_count": 20,
+  "elapsed_ms": 21968.944099964574,
+  "blurred_psnr": 18.94687787612278,
+  "blurred_ssim": 0.6243044280099023,
+  "restored_psnr": 24.78398003573727,
+  "restored_ssim": 0.7439941428697091
+}

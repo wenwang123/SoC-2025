@@ -1,0 +1,42 @@
+# 图像模糊去除固定口径复测
+
+测试日期：2026-11-08
+
+## 测试口径
+
+读取验证清单最后100对图像。输入和真值转为RGB，按0.5倍线性缩放，并取中心1024×1024区域。PSNR、SSIM和MS-SSIM均在8 bit RGB图像上计算。
+
+## 质量结果
+
+| 版本 | PSNR均值 | SSIM均值 | MS-SSIM均值 |
+| --- | ---: | ---: | ---: |
+| 模糊输入 | 23.3285 dB | 0.88393 | 0.94796 |
+| width=24 Paddle | 28.3394 dB | 0.96296 | 0.98203 |
+| width=32 Paddle | 28.6620 dB | 0.96369 | 0.98242 |
+
+width=24权重与`code/test/model.pdparams`逐字节一致。0416 NCNN产物对应width=32模型，不能与width=24训练权重的指标直接对应。
+
+## NCNN一致性
+
+抽取10对样本，以相同1024中心裁剪口径比较NCNN CPU与Paddle width=32输出。NCNN平均PSNR为27.7209 dB，相对Paddle平均差异为+0.0014 dB，处于8 bit量化舍入范围内。
+
+## 手机样例
+
+IMG_3769，3024×4032，NCNN CPU分块推理20块，耗时约21.97秒。模糊输入PSNR为18.9469 dB、SSIM为0.6243；恢复后为24.7840 dB、SSIM为0.7440。
+
+## C++部署
+
+详细数据见`cpp_performance.csv`。CPU和Vulkan均能完成推理与写图。256×256输入的CPU与Vulkan输出PSNR为73.23 dB，SSIM为0.999997，最大单像素差为1。
+
+原程序在Vulkan推理结束后存在进程退出访问冲突。使用受控进程结束后可正常退出，说明问题位于资源释放或运行库清理阶段。
+
+## 相关文件
+
+- `width24_per_image.csv`
+- `width32_per_image.csv`
+- `ncnn_cpu_per_image.csv`
+- `phone_IMG_3769.json`
+- `cpp_performance.csv`
+- `model_inventory.json`
+
+完整测试说明见`doc/图像模糊去除自测试报告.docx`。

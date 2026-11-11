@@ -1,0 +1,18 @@
+[
+  {
+    "name": "model_a_paddle",
+    "path": "code/test/model.pdparams",
+    "size": 19706044,
+    "sha256": "8926be6df1183c6d9d0bf86c23aabdb67b565c586d5009d70edaa4a0e17c3ef7",
+    "width": 24,
+    "parameters": 4918923
+  },
+  {
+    "name": "model_b_ncnn",
+    "path": "release/0416_1024nafnet_model.ncnn.bin",
+    "size": 17520356,
+    "sha256": "6cae8dfb12e50e3fd21b0dc3bbad63196458760b84ce9a775579c8557204f738",
+    "width": 32,
+    "parameters": 8702307
+  }
+]

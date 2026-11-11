@@ -1,0 +1,29 @@
+# 1. 转换权重
+# 当前脚本包含本机路径，请先按实际Paddle权重位置修改。
+python convert_weights.py
+
+# 2. 验证PyTorch权重
+python verify.py
+
+# 3. 导出TorchScript
+# export_pnnx.py默认按width=32、1024x1024输入导出。
+python export_pnnx.py
+
+# 4. 使用PNNX转换
+pnnx nafnet_model.pt inputshape=[1,3,1024,1024]
+
+# 5. 检查生成的文件
+# 应生成：
+# - nafnet_model.ncnn.param
+# - nafnet_model.ncnn.bin
+
+# 注意：若改用width=24训练权重，必须同步修改convert_weights.py、
+# verify.py、export_pnnx.py中的网络宽度和权重路径，不能混用0416产物。
+
+# 6. 构建C++工程
+cmake -S . -B build -G "<Visual Studio generator>" -A x64 ^
+  -DNCNN_DIR="<ncnn-root>" ^
+  -DOpenCV_DIR="<opencv-build-root>"
+cmake --build build --config Release
+
+# 7. 运行前将模型和DLL放在可执行文件工作目录，或修改main中的相对路径。
