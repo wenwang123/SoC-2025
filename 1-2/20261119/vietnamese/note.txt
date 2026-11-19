@@ -1,0 +1,23 @@
+# 多语言识别——越南语
+
+多语言识别算法目前基于paddleOCR框架进行训练，代码可直接从仓库下载，详细过程见readme.md，目前使用的版本为release3.1.1
+
+
+## 数据集路径
+
+通过网盘分享的文件：vietnamese_data_20261118.zip
+链接: https://pan.baidu.com/s/17_yH6p4Mf537dVnWMOQzjA?pwd=h3w7 提取码: h3w7 
+--来自百度网盘超级会员v6的分享
+
+
+## 模型路径
+
+通过网盘分享的文件：vietnamese_small_rec_250.zip
+链接: https://pan.baidu.com/s/1AHP3LzIcRPQ5z93d-E6sSg?pwd=4upr 提取码: 4upr 
+--来自百度网盘超级会员v6的分享
+
+
+## 测试结果
+通过网盘分享的文件：visualized_result.zip
+链接: https://pan.baidu.com/s/1-e7pqF-_2_vmfz-Uow_a-g?pwd=i62n 提取码: i62n 
+--来自百度网盘超级会员v6的分享

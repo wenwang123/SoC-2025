@@ -1,0 +1,23 @@
+# 多语言识别——阿拉伯语和希伯来语
+
+多语言识别算法目前基于paddleOCR框架进行训练，代码可直接从仓库下载，详细过程见readme.md，目前使用的版本为release3.1.1
+
+
+## 数据集路径
+
+通过网盘分享的文件：mixed2_data_20261119.zip
+链接: https://pan.baidu.com/s/1q-xXVbcw1Em8uZisvFTJew?pwd=tg32 提取码: tg32 
+--来自百度网盘超级会员v6的分享
+
+
+## 模型路径
+
+通过网盘分享的文件：mixed2_small_rec_rtlfix.zip
+链接: https://pan.baidu.com/s/1dTuLt5vho1l1DqXsMTU-tw?pwd=va51 提取码: va51 
+--来自百度网盘超级会员v6的分享
+
+
+## 测试结果
+通过网盘分享的文件：visualized_result.zip
+链接: https://pan.baidu.com/s/1WdZgZxf6q9Sv88CVCkGQIQ?pwd=hd9w 提取码: hd9w 
+--来自百度网盘超级会员v6的分享

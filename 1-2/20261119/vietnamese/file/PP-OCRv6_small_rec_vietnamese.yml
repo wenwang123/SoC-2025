@@ -1,0 +1,156 @@
+# Vietnamese confusion/scan dataset: 100000 synthetic + 121 printed real crops / 10000 val.
+# Independent run initialized from the official pretrained model; no resume.
+# Raw labels <= 30 chars; NRTR maximum 32 reserves BOS/EOS.
+Global:
+  model_name: PP-OCRv6_small_rec
+  debug: false
+  use_gpu: true
+  epoch_num: 20
+  log_smooth_window: 20
+  print_batch_step: 10
+  save_model_dir: ./output/vietnamese_confusion_scanstyle_small_rec_250
+  save_epoch_step: 4
+  eval_batch_step: [0, 5000]
+  cal_metric_during_train: true
+  pretrained_model: ./pretrain_models/PP-OCRv6_small_rec_pretrained.pdparams
+  checkpoints:
+  save_inference_dir:
+  use_visualdl: false
+  infer_img: data/vietnamese_data_confusion_scanstyle_20261118/images/val_word_1.jpg
+  character_dict_path: ./data/vietnamese_data_confusion_scanstyle_20261118/dict.txt
+  # Raw labels have at most 30 characters; NRTR also needs BOS/EOS slots.
+  max_text_length: &max_text_length 32
+  infer_mode: false
+  use_space_char: true
+  distributed: true
+  save_res_path: ./output/vietnamese_confusion_scanstyle_small_rec_250/predicts_vietnamese_confusion_scanstyle.txt
+  d2s_train_image_shape: [3, 48, 320]
+
+Optimizer:
+  name: Adam
+  beta1: 0.9
+  beta2: 0.999
+  lr:
+    name: Cosine
+    learning_rate: 0.0003
+    warmup_epoch: 2
+  regularizer:
+    name: L2
+    factor: 3.0e-05
+
+Architecture:
+  model_type: rec
+  algorithm: SVTR_LCNet
+  Transform:
+  Backbone:
+    name: PPLCNetV4
+    model_size: small
+    # Match the 80 CTC time steps produced by a 640x48 evaluation input.
+    rec_train_pool_width: 80
+  Head:
+    name: MultiHead
+    head_list:
+    - CTCHead:
+        Neck:
+          name: lightsvtr
+          dims: 120
+          depth: 2
+          mlp_ratio: 2.0
+          local_kernel: 7
+          use_guide: false
+        Head:
+          fc_decay: 0.00001
+    - NRTRHead:
+        nrtr_dim: 384
+        max_text_length: *max_text_length
+
+Loss:
+  name: MultiLoss
+  loss_config_list:
+  - CTCLoss:
+  - NRTRLoss:
+
+PostProcess:
+  name: CTCLabelDecode
+
+Metric:
+  name: RecMetric
+  main_indicator: acc
+
+Train:
+  dataset:
+    name: MultiScaleDataSet
+    ds_width: false
+    data_dir: ./data/vietnamese_data_confusion_scanstyle_20261118
+    ext_op_transform_idx: 1
+    label_file_list:
+    - ./data/vietnamese_data_confusion_scanstyle_20261118/train.txt
+    ratio_list:
+    - 1.0
+    transforms:
+    - DecodeImage:
+        img_mode: BGR
+        channel_first: false
+    # No RecConAug: keep the original 5-30-char text and natural word spacing.
+    # Global max_text_length is shared with operators, so setting RecConAug to
+    # 30 locally would be overridden by the 32-slot NRTR encoding length.
+    # Scan-style images already include blur, tilt, stroke and crop variation.
+    # RecAug.get_crop can cut 1-8 rows and remove Vietnamese tone marks.
+    - RecAug:
+        tia_prob: 0.1
+        crop_prob: 0.0
+        reverse_prob: 0.03
+        noise_prob: 0.1
+        jitter_prob: 0.05
+        blur_prob: 0.05
+        hsv_aug_prob: 0.1
+    - MultiLabelEncode:
+        gtc_encode: NRTRLabelEncode
+    - KeepKeys:
+        keep_keys:
+        - image
+        - label_ctc
+        - label_gtc
+        - length
+        - valid_ratio
+  sampler:
+    name: MultiScaleSampler
+    # Keep roughly the same width/height ratio at every height. Each pair is [W,H].
+    scales: [[432, 32], [640, 48], [856, 64]]
+    # With fix_bs=false, the actual batch sizes are 64 / 28 / 16.
+    first_bs: &bs 64
+    fix_bs: false
+    divided_factor: [8, 16]
+    is_training: True
+  loader:
+    shuffle: true
+    batch_size_per_card: *bs
+    drop_last: true
+    num_workers: 64
+
+Eval:
+  dataset:
+    name: SimpleDataSet
+    data_dir: ./data/vietnamese_data_confusion_scanstyle_20261118
+    label_file_list:
+    - ./data/vietnamese_data_confusion_scanstyle_20261118/val.txt
+    transforms:
+    - DecodeImage:
+        img_mode: BGR
+        channel_first: false
+    - MultiLabelEncode:
+        gtc_encode: NRTRLabelEncode
+    - RecResizeImg:
+        image_shape: [3, 48, 640]
+    - KeepKeys:
+        keep_keys:
+        - image
+        - label_ctc
+        - label_gtc
+        - length
+        - valid_ratio
+  loader:
+    shuffle: false
+    drop_last: false
+    batch_size_per_card: *bs
+    num_workers: 16
