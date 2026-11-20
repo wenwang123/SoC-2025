@@ -9,27 +9,7 @@ Python 调用
 """
 
 import argparse
-import os
 from pathlib import Path
-
-# Select the accelerator before importing PyTorch. Set PIXRESTORE_DEVICE=npu on
-# an Ascend node; CUDA and CPU remain independent of torch_npu.
-_BACKEND = os.environ.get("PIXRESTORE_DEVICE", "cuda").strip().lower()
-if _BACKEND not in {"cuda", "npu", "cpu"}:
-    raise ValueError("PIXRESTORE_DEVICE must be cuda, npu, or cpu")
-if _BACKEND == "npu":
-    try:
-        import torch_npu  # noqa: F401
-        from torch_npu.contrib import transfer_to_npu  # noqa: F401
-    except ImportError as error:
-        if "libhccl.so" in str(error):
-            raise RuntimeError(
-                "Ascend CANN is not loaded. Run `pjenv compute` before starting "
-                "the Jupyter server/kernel, then set PIXRESTORE_DEVICE=npu."
-            ) from error
-        raise
-else:
-    os.environ.setdefault("TORCH_DEVICE_BACKEND_AUTOLOAD", "0")
 
 import numpy as np
 import torch
@@ -101,7 +81,7 @@ def _sliding(model, source, candidate, device, tile=TILE, overlap=OVERLAP):
 
 
 @torch.inference_mode()
-def predict(model, source_image, candidate_image, device,
+def _predict_once(model, source_image, candidate_image, device,
             tile=TILE, overlap=OVERLAP, match_scale_threshold=MATCH_SCALE_THRESHOLD):
     """返回一张图对的原分辨率水印概率图。
 
@@ -131,19 +111,47 @@ def predict(model, source_image, candidate_image, device,
     }
 
 
+@torch.inference_mode()
+def predict(model, source_image, candidate_image, device,
+            tile=TILE, overlap=OVERLAP, match_scale_threshold=MATCH_SCALE_THRESHOLD,
+            rotation_ensemble=False):
+    """Predict a mask; optionally average four restored orientation views."""
+    result = _predict_once(model, source_image, candidate_image, device,
+                           tile, overlap, match_scale_threshold)
+    if not rotation_ensemble:
+        return result
+    total = result["probability"].astype(np.float32).copy()
+    for turns, method in ((1, Image.Transpose.ROTATE_90),
+                          (2, Image.Transpose.ROTATE_180),
+                          (3, Image.Transpose.ROTATE_270)):
+        rotated = _predict_once(model, source_image.transpose(method), candidate_image.transpose(method),
+                                device, tile, overlap, match_scale_threshold)
+        total += np.rot90(rotated["probability"], -turns)
+    result["probability"] = total / 4
+    result["rotation_ensemble"] = True
+    return result
+
+
 def load_model(checkpoint_path=DEFAULT_CHECKPOINT, device="auto"):
     """加载检测器，返回 ``(model, device, info)``。"""
     if device == "auto":
-        if _BACKEND == "npu":
-            device = torch.device("npu:0")
-        else:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device(device)
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA was requested, but torch.cuda.is_available() is False")
+    if device.type not in {"cuda", "cpu"}:
+        raise ValueError(f"Only CUDA and CPU are supported, got: {device}")
+
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     model, architecture = paired_model_from_checkpoint(checkpoint)
     model = model.to(device).eval()
-    info = {"architecture": architecture}
+    info = {
+        "architecture": architecture,
+        "epoch": checkpoint.get("epoch"),
+        "best_iou": checkpoint.get("best_iou"),
+        "source_checkpoint_sha256": checkpoint.get("source_checkpoint_sha256"),
+    }
     return model, device, info
 
 
@@ -162,17 +170,24 @@ def main() -> None:
     parser.add_argument("--threshold", type=float, default=0.35,
                         help="概率阈值。0.35 偏召回，适合「mask 外回退到原图」的融合方式")
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--rotation-ensemble", action="store_true",
+                        help="Average 0/90/180/270-degree views for rotated text; costs four passes")
     args = parser.parse_args()
 
     model, device, info = load_model(args.checkpoint, args.device)
-    print(f"architecture={info['architecture']} device={device}", flush=True)
+    print(
+        f"architecture={info['architecture']} epoch={info['epoch']} "
+        f"best_iou={info['best_iou']} device={device}",
+        flush=True,
+    )
 
     with Image.open(args.source) as handle:
         source_image = handle.convert("RGB")
     with Image.open(args.candidate) as handle:
         candidate_image = handle.convert("RGB")
 
-    result = predict(model, source_image, candidate_image, device)
+    result = predict(model, source_image, candidate_image, device,
+                     rotation_ensemble=args.rotation_ensemble)
     probability = result["probability"]
     mask = probability >= args.threshold
 

@@ -1,9 +1,6 @@
-# Watermark mask detector — inference and visualization.
-#
-# Install PyTorch and torchvision separately to match the target accelerator.
-# A3 verification used torch 2.7.1+cpu with the Bootstrap-provisioned torch_npu
-# plugin and torchvision 0.22.1. CUDA deployments should use their matching
-# official PyTorch/torchvision wheels instead of replacing the NPU stack.
+numpy>=1.26,<3
+Pillow>=10,<13
 
-numpy==1.26.4
-Pillow==11.0.0
+# visualize.ipynb only
+matplotlib>=3.7
+pandas>=2.0

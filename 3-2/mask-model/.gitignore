@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+outputs/
+test_data_pairs/
+
+# Model weights are delivered separately.
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.ckpt
+*.bin

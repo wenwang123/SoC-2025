@@ -14,9 +14,26 @@ except ImportError:
 class DifferenceGateMaskNet(nn.Module):
     """Difference-first decoder with detail and optional large-region heads."""
 
-    def __init__(self, width=64, pretrained=True, large_region=False):
+    def __init__(self, width=64, pretrained=True, large_region=False, source_decoder="legacy",
+                 source_refinement=False, pixel_refinement=False):
         super().__init__()
+        if source_decoder not in {"legacy", "full"}:
+            raise ValueError("source_decoder must be legacy or full")
+        self.source_decoder = source_decoder
+        if source_refinement and source_decoder != "full":
+            raise ValueError("source_refinement requires the full source decoder")
+        self.source_refine_head = nn.Conv2d(width * 2, 1, 1) if source_refinement else None
+        if self.source_refine_head is not None:
+            nn.init.zeros_(self.source_refine_head.weight)
+            nn.init.zeros_(self.source_refine_head.bias)
         self.large_region = large_region
+        self.pixel_projection = nn.Conv2d(width, 24, 1) if pixel_refinement else None
+        self.pixel_head = (nn.Sequential(nn.Conv2d(41, 41, 3, padding=1, groups=41), nn.SiLU(),
+                                         nn.Conv2d(41, 32, 1), nn.SiLU(), nn.Conv2d(32, 1, 1))
+                           if pixel_refinement else None)
+        if self.pixel_head is not None:
+            nn.init.zeros_(self.pixel_head[-1].weight)
+            nn.init.zeros_(self.pixel_head[-1].bias)
         self.encoder = mobilenet_v3_large(weights=MobileNet_V3_Large_Weights.DEFAULT if pretrained else None).features
         self.feature_ids = {1, 3, 6, 12, 16}
         channels = (16, 24, 40, 112, 960)
@@ -89,7 +106,22 @@ class DifferenceGateMaskNet(nn.Module):
                 mode="bilinear",
                 align_corners=False,
             )
-        if not return_aux:
+        if self.pixel_head is not None:
+            fine = F.interpolate(self.pixel_projection(value), size=output_size,
+                                 mode="bilinear", align_corners=False)
+            source_y = F.pad((source[:, :, 1:, :] - source[:, :, :-1, :]).abs(), (0, 0, 0, 1))
+            candidate_y = F.pad((candidate[:, :, 1:, :] - candidate[:, :, :-1, :]).abs(), (0, 0, 0, 1))
+            edge_y = (source_y - candidate_y).abs()
+            large_probability = large_logits.sigmoid() if large_logits is not None else torch.zeros_like(prediction)
+            pixel_input = torch.cat((fine, source, candidate, rgb_difference, edge_difference, edge_y,
+                                     prediction.sigmoid(), large_probability), dim=1)
+            correction = self.pixel_head(pixel_input)
+            # Applying the same correction to both heads refines their combined
+            # logit, while keeping the training/inference return conventions.
+            prediction = prediction + correction
+            if large_logits is not None:
+                large_logits = large_logits + correction
+        if not return_aux and self.source_refine_head is None:
             if large_logits is not None:
                 return torch.logaddexp(prediction, large_logits)
             return prediction
@@ -105,9 +137,16 @@ class DifferenceGateMaskNet(nn.Module):
             )
             source_pyramid.append(source_value)
         source_logits = F.interpolate(
-            self.source_head(source_pyramid[0]), size=output_size, mode="bilinear", align_corners=False
+            self.source_head(source_pyramid[-1] if self.source_decoder == "full" else source_pyramid[0]),
+            size=output_size, mode="bilinear", align_corners=False
         )
         difference_logits = F.interpolate(self.difference_head(fused[0]), size=output_size, mode="bilinear", align_corners=False)
+        if self.source_refine_head is not None:
+            correction = self.source_refine_head(torch.cat((value, source_value), dim=1))
+            prediction = prediction + F.interpolate(correction, size=output_size,
+                                                     mode="bilinear", align_corners=False)
+        if not return_aux:
+            return torch.logaddexp(prediction, large_logits) if large_logits is not None else prediction
         if large_logits is None:
             return prediction, (source_logits, difference_logits)
         return prediction, (source_logits, difference_logits, large_logits)

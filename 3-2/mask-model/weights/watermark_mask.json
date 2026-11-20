@@ -1,0 +1,36 @@
+{
+  "weights_file": "watermark_mask.pt",
+  "sha256": "5e7c5f090bd3f7d6e98c9fca30ecdc468f29584e71c3c3ec1c4de16d024b3216",
+  "architecture": "difference_gate_scale",
+  "source_checkpoint_sha256": "1291e02ea412c59efa546e108aae0215ed2865bb2e324f0aa7517b29bf8019e0",
+  "source_checkpoint": "runs/quality-orientation-v24-20261120/teacher_bank/checkpoint-e01.pt",
+  "full_validation": {
+    "images": 2084,
+    "iou": 0.4134428005655718,
+    "precision": 0.44292282197212324,
+    "recall": 0.8613378762187096,
+    "f1": 0.5850152555167252,
+    "false_positive_fraction": 0.03979711929307251
+  },
+  "target_mean_recall": 0.7324137507874058,
+  "inference": {
+    "tile": 512,
+    "overlap": 64,
+    "threshold": 0.35,
+    "rotation_ensemble": false,
+    "morphology": null
+  },
+  "conversion": {
+    "tensor_device": "cpu",
+    "npu_dependency": false,
+    "training_state_included": false
+  },
+  "evaluation": "runs/quality-orientation-v24-20261120/teacher_bank/full-eval-e01",
+  "visual_review": "runs/quality-candidate-review-20261120",
+  "code_hashes": {
+    "base-code/infer.py": "641cf610b2bebd4f7945ee62b7218c5d84eb03209699023ba11f4daea7062c37",
+    "base-code/models/__init__.py": "6d456da120c11ec8f7c2e009fcf46186731d569e1164f0cb70f958e0ef2668fa",
+    "base-code/models/difference_gate_network.py": "c0b94570e1b9f10d1f596dab9857186cd3de3b8956b48aebb6c740d2feca892e",
+    "base-code/models/network.py": "8d457954b32979054a3ba45b199add7ebf5aee9c9ed5b4af8172cf57207ba8a4"
+  }
+}

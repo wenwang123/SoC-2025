@@ -1,47 +1,31 @@
-# 配对水印 Mask 检测
+# 配对水印 Mask
 
-该模型根据含水印原图和去水印候选图，逐像素预测水印区域。输入图像应使用同一坐标系；候选图由去水印模型生成。
+输入有水印原图和对应的去水印候选图，输出水印概率图和二值 mask。
 
-## 命令行
-
-先安装与目标硬件匹配的 PyTorch / torchvision，再安装 `requirements.txt` 中的依赖。CUDA 部署使用对应 CUDA 版本的 PyTorch / torchvision。
-
-CUDA 或 CPU 自动选择：
+先安装与设备匹配的 PyTorch 2.7.1、torchvision 0.22.1，再安装其余依赖：
 
 ```bash
-python infer.py \
-  --source /path/to/watermarked.png \
-  --candidate /path/to/clean_candidate.png \
-  --output /path/to/output
+pip install -r requirements.txt
+python verify.py --device cuda
+python infer.py --source original.jpg --candidate candidate.png --output outputs --device cuda
 ```
 
-Ascend NPU：
+无显卡时使用 `--device cpu`。默认阈值为 0.35，单方向推理，无额外膨胀或填洞。
+两张图应是同一画面，尺寸不同时会自动对齐。
 
-```bash
-PIXRESTORE_DEVICE=npu python infer.py \
-  --source /path/to/watermarked.png \
-  --candidate /path/to/clean_candidate.png \
-  --output /path/to/output
-```
-
-输出目录包含 16 位概率图 `*_probability.png` 和二值 `*_mask.png`。概率图像素值除以 65535 即为概率。默认阈值为 0.35；推理不做形态学闭合、填洞或膨胀。
-
-## Python 调用
+Python 调用：
 
 ```python
 from PIL import Image
 from infer import load_model, predict
 
-model, device, info = load_model()
-with Image.open("watermarked.png") as f:
-    source = f.convert("RGB")
-with Image.open("clean_candidate.png") as f:
-    candidate = f.convert("RGB")
-result = predict(model, source, candidate, device)
-probability = result["probability"]
-mask = probability >= 0.35
+model, device, _ = load_model(device="cuda")
+result = predict(model, Image.open("original.jpg"), Image.open("candidate.png"), device)
+mask = result["probability"] >= 0.35
 ```
 
-## 可视化
+权重位于 `weights/watermark_mask.pt`，校验信息在同名 JSON 文件中。
+`visualize.ipynb` 可批量查看四项结果；图对按 `test_data_pairs/<组名>/source` 与
+`test_data_pairs/<组名>/candidate` 放置，候选图使用同名 PNG。
 
-打开 `visualize.ipynb` 并运行单元。默认读取项目的 `test_data` 配对清单；也可以修改 `DATA_DIR` 指向 JSONL 清单，或包含 `source/` 与 `candidate/` 子目录的数据目录。notebook 展示原图、候选图、Mask 和覆盖图。
+模型权重单独交付，不在本仓库中；运行前将其放到 `weights/watermark_mask.pt`。
