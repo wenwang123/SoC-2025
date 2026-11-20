@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.15)
+project(esd_ncnn LANGUAGES CXX)
+find_package(ncnn REQUIRED CONFIG)
+find_package(OpenMP REQUIRED)
+add_library(esd_ncnn SHARED backend.cpp fusion_ops.cpp)
+target_compile_features(esd_ncnn PRIVATE cxx_std_17)
+target_compile_options(esd_ncnn PRIVATE -ffp-contract=off)
+target_link_libraries(esd_ncnn PRIVATE ncnn OpenMP::OpenMP_CXX)
