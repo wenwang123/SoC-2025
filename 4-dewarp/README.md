@@ -1,6 +1,6 @@
 # 分割推理交付
 
-本目录包含四套部署推理代码：
+本目录包含五套部署推理代码：
 
 ```text
 4-dewarp/
@@ -8,7 +8,8 @@
 ├── Lightweight-Segmentation-Only-Inference/ # 轻量级单分割推理
 ├── Joint-Segmentation-Keypoint-Detection-Inference/ # 分割与关键点检测联合推理
 ├── internimage-l-semantic-segmentation/ # InternImage-L + UPerHead 语义分割
-└── internimage-l-instance/              # InternImage-L + MaskDINO 实例分割
+├── internimage-l-instance/              # InternImage-L + MaskDINO 实例分割
+└── rf-detr-seg/                         # RF-DETR-Seg Large 实例分割
 ```
 
 语义分割输出合并的文档前景区域；实例分割分别输出每份文档的 mask。
@@ -26,6 +27,10 @@ Letterbox 进行单次整图推理；
 该包使用 PyTorch/CUDA，需要 NVIDIA GPU。
 
 训练工程位于 `../Instance/Train_InternImage-L-Instance/`。
+
+## RF-DETR-Seg 实例分割
+
+在 PyCharm 打开 `rf-detr-seg/infer.py`，在文件顶部设置 `OUTPUT_MODE` 后直接运行。设为 `production` 输出原图尺寸的实例 Mask，设为 `debug` 输出叠加图。默认批量读取 `../TEST_dewarp/`，权重和输出位于部署目录。解释器和配置见 [部署说明](rf-detr-seg/README.md)，训练位于 [Instance/RF-DETR-Seg](../Instance/RF-DETR-Seg/README.md)。
 
 ## InternImage-L 语义分割
 

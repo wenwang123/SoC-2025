@@ -1,0 +1,16 @@
+# Image inference dependencies. Install requirements-model.txt with --no-deps.
+torch==2.8.0
+torchvision==0.23.0
+transformers==5.22.1
+requests==2.34.2
+tqdm==4.70.1
+pydantic==2.14.3
+pyDeprecate==0.9.0
+defusedxml==0.7.1
+matplotlib==3.11.2
+PyYAML==6.0.3
+scipy==1.18.1
+numpy==2.5.4
+opencv-python-headless==5.0.0.93
+Pillow==13.0.0
+simplejpeg==1.9.0

@@ -1,0 +1,3 @@
+# Install with --no-deps after requirements.txt.
+rfdetr @ git+https://github.com/roboflow/rf-detr.git@7433d5919d0f7e72cc6cb78663e0a731afd499e0
+supervision==0.31.4
