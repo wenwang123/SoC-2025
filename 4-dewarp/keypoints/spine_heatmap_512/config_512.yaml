@@ -1,0 +1,13 @@
+# Configuration record; the Python scripts contain the active values.
+pipeline:
+  stages: [single_yolo_orientation_and_coarse_spine, local_heatmap]
+  detector_weights: weights/detector.pt
+  heatmap_weights: weights/heatmap.pt
+yolo:
+  input_size: 512
+  confidence_threshold: 0.01
+  spine_keypoint_indices: [4, 5]
+  default_orientation: auto
+heatmap:
+  crop_size: 384
+  checkpoint_epoch: 10
